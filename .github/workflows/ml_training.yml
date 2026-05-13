@@ -1,0 +1,127 @@
+name: ML Model Training & Evaluation
+
+on:
+  workflow_dispatch:
+    inputs:
+      num_epochs:
+        description: Number of training epochs
+        required: false
+        default: '10'
+        type: string
+      batch_size:
+        description: Training batch size
+        required: false
+        default: '32'
+        type: string
+      learning_rate:
+        description: Learning rate for optimizer
+        required: false
+        default: '0.001'
+        type: string
+
+jobs:
+  train_model:
+    runs-on: ubuntu-latest
+    name: Train PyTorch Model
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+
+      - name: Display data preparation files
+        run: |
+          echo "=== Checking available data files ==="
+          ls -la artifacts/ || echo "No artifacts directory found"
+
+      - name: Preprocess training data
+        run: |
+          echo "=== Starting data preprocessing ==="
+          python preprocess_data.py
+
+      - name: Train PyTorch Model
+        env:
+          NUM_EPOCHS: ${{ github.event.inputs.num_epochs || '10' }}
+          BATCH_SIZE: ${{ github.event.inputs.batch_size || '32' }}
+          LEARNING_RATE: ${{ github.event.inputs.learning_rate || '0.001' }}
+          MLFLOW_TRACKING_URI: file:./mlruns
+        run: |
+          echo "=== Training model with parameters ==="
+          echo "Epochs: $NUM_EPOCHS"
+          echo "Batch Size: $BATCH_SIZE"
+          echo "Learning Rate: $LEARNING_RATE"
+          python train_torch_model.py
+
+      - name: Upload training artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: training-artifacts
+          path: |
+            artifacts/
+            mlruns/
+            MODEL_CARD.md
+          retention-days: 30
+
+  evaluate_model:
+    runs-on: ubuntu-latest
+    name: Evaluate Model Performance
+    needs: train_model
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+
+      - name: Download training artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: training-artifacts
+
+      - name: Run model predictions
+        run: |
+          echo "=== Running model predictions on test data ==="
+          python predict_torch_model.py
+
+      - name: Evaluate model on test set
+        run: |
+          echo "=== Computing evaluation metrics ==="
+          python compute_stats.py
+
+      - name: Upload evaluation results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: evaluation-results
+          path: |
+            test_predictions.csv
+            artifacts/test_predictions.csv
+          retention-days: 30
+
+      - name: Display evaluation summary
+        if: always()
+        run: |
+          echo "=== Evaluation Complete ==="
+          echo "Model training and evaluation workflow finished successfully!"
+          if [ -f "test_predictions.csv" ]; then
+            echo "✓ Predictions generated"
+            head -5 test_predictions.csv
+          fi

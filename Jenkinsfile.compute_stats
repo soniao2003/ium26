@@ -1,0 +1,28 @@
+pipeline {
+    agent {
+        docker {
+            image 'soniao2003/inzynieria'
+            args '-v $PWD/artifacts:/app/artifacts'
+        }
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+
+        stage('Preprocess data') {
+            steps {
+                sh 'python preprocess_data.py'
+            }
+        }
+
+        stage('Compute statistics') {
+            steps {
+                sh 'python compute_stats.py'
+            }
+        }
+    }
+}
