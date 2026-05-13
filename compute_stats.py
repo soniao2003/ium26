@@ -9,7 +9,11 @@ def print_subset_stats(name: str, df: pd.DataFrame) -> None:
     stats = df[numeric_cols].agg(["mean", "min", "max", "std", "median"])
     print(stats)
 
-    categorical_cols = df.select_dtypes(include=["object", "str"]).columns
+    categorical_cols = [
+        col
+        for col in df.columns
+        if pd.api.types.is_object_dtype(df[col]) or pd.api.types.is_string_dtype(df[col])
+    ]
     if len(categorical_cols) > 0:
         print("\nRozkład zmiennych kategorycznych:")
         for col in categorical_cols:
@@ -34,7 +38,11 @@ def main() -> None:
     print("\nLiczba wierszy: ", len(data_clean))
     print("Liczba kolumn: ", len(data_clean.columns))
 
-    categorical_cols = data_clean.select_dtypes(include=["object", "str"]).columns
+    categorical_cols = [
+        col
+        for col in data_clean.columns
+        if pd.api.types.is_object_dtype(data_clean[col]) or pd.api.types.is_string_dtype(data_clean[col])
+    ]
     print("\nRozkład zmiennych kategorycznych:")
     for col in categorical_cols:
         print(f"\n{col}:")
