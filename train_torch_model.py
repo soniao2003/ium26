@@ -308,7 +308,7 @@ def main() -> None:
 
         model_uri_path = os.path.join("artifacts", "torch_revenue_mlflow_model_uri.txt")
         with open(model_uri_path, "w", encoding="utf-8") as f:
-            f.write(selected_model_uri + "\n")
+            f.write(run_model_uri + "\n")
 
         print(f"Zapisano model do pliku: {model_path}")
         print(f"Zapisano listę cech do pliku: {meta_path}")
